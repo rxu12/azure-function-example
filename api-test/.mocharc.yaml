@@ -1,0 +1,7 @@
+color: true
+extension:
+  - "js"
+# fgrep and grep are mutually exclusive
+# fgrep: something
+spec:
+  - "./**/*.spec.js"

@@ -1,0 +1,52 @@
+version: "3.5"
+services:
+  redis:
+    image: redis:3.2.6
+    command: ["redis-server", "--requirepass", "testredis"]
+    networks:
+      nw-az:
+        aliases:
+          - db.redis.docker.io
+  api-test:
+    build:
+      context: ./api-test
+      dockerfile: Dockerfile
+    working_dir: /tests
+    command: ["/bin/bash", "./waitfor.sh", "azfunc-api:80", "--", "npm", "test"]
+    environment:
+      MICROSERVICE_URL: http://azfunc.api.docker.io:80
+    links:
+      - azfunc-api
+    depends_on:
+      - redis
+      - azfunc-api
+    volumes:
+      - ./api-test/tests:/tests/tests
+    networks:
+      nw-az:
+
+  azfunc-api:
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    ports:
+      - 8443:80
+    working_dir: /api-function-app
+    healthcheck:
+      test: [CMD, curl, "-k", "http://localhost:80/api/HttpExample"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    environment:
+      AzureWebJobsStorage: "UseDevelopmentStorage=true;DevelopmentStorageProxyUri=http://inventory.api.docker.coles.io"
+      NODE_TLS_REJECT_UNAUTHORIZED: 0
+    depends_on:
+      - redis
+    networks:
+      nw-az:
+        aliases:
+          - azfunc.api.docker.io
+
+networks:
+  nw-az:
+    driver: bridge
